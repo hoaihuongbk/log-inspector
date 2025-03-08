@@ -15,15 +15,14 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
       - name: Get Version
         id: version
         run: echo "::set-output name=version::$(cat VERSION)"
+
       - name: Build
         run: cargo build --release
-      - name: Calculate SHA256
-        run: shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1 > sha256.txt
+
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -32,15 +31,61 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           release_name: Release v${{ steps.version.outputs.version }}
+
+      - name: Upload Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/release/log-inspector
+          asset_name: log-inspector
+          asset_content_type: application/octet-stream
+
+      - name: Calculate Checksum
+        id: checksum
+        run: echo "::set-output name=sha256::$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)"
+
       - name: Update Formula
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA256: ${{ steps.checksum.outputs.sha256 }}
         run: |
-          git checkout main
-          SHA256=$(cat sha256.txt)
-          VERSION=$(cat VERSION)
-          sed -i '' "s/version \".*\"/version \"$VERSION\"/" .homebrew/log-inspector.rb
-          sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" .homebrew/log-inspector.rb
-          git config --global user.email "github-actions@github.com"
-          git config --global user.name "GitHub Actions"
-          git add .homebrew/log-inspector.rb
+          git fetch origin
+          BRANCH_NAME="update-formula-v${VERSION}"
+          git checkout -b $BRANCH_NAME origin/main
+          
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "# Updated by GitHub Actions on $TIMESTAMP" > Formula/log-inspector.rb.tmp
+          cat Formula/log-inspector.rb >> Formula/log-inspector.rb.tmp
+          mv Formula/log-inspector.rb.tmp Formula/log-inspector.rb
+          
+          sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
+          git add Formula/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
-          git push origin main
+          git push origin $BRANCH_NAME
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+  create_pr:
+    needs: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create Pull Request
+        uses: repo-sync/pull-request@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          source_branch: ${{ env.BRANCH_NAME }}
+          destination_branch: "main"
+          pr_title: "Update formula to version ${{ env.VERSION }}"
+          pr_body: "Automated PR to update Homebrew formula"
+          pr_label: "automated"
+
+      - name: Enable Auto-merge
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
+          merge-method: squash
