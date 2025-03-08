@@ -1,15 +1,11 @@
 name: Release
 
 on:
-#  push:
-#    paths:
-#      - 'VERSION'
-#    branches:
-#      - main
-  pull_request:
-    branches: [ "main" ]
-#    paths:
-#      - 'VERSION'
+  push:
+    paths:
+      - 'VERSION'
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -69,6 +65,7 @@ jobs:
           git add Formula/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
           git push origin $BRANCH_NAME
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
   create_pr:
@@ -85,18 +82,10 @@ jobs:
           pr_title: "Update formula to version ${{ env.VERSION }}"
           pr_body: "Automated PR to update Homebrew formula"
           pr_label: "automated"
-#      - name: Create Pull Request
-#        uses: repo-sync/pull-request@v2
-#        with:
-#          github_token: ${{ secrets.GITHUB_TOKEN }}
-#          source_branch: ${{ env.BRANCH_NAME }}
-#          destination_branch: "main"
-#          pr_title: "Update formula to version ${{ env.VERSION }}"
-#          pr_body: "Automated PR to update Homebrew formula"
-#          pr_label: "automated"
-#      - name: Enable Auto-merge
-#        uses: peter-evans/enable-pull-request-automerge@v2
-#        with:
-#          token: ${{ secrets.GITHUB_TOKEN }}
-#          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
-#          merge-method: squash
+
+      - name: Enable Auto-merge
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
+          merge-method: squash
