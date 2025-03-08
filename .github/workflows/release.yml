@@ -46,7 +46,7 @@ jobs:
       - name: Update Formula
         run: |
           export VERSION=$(cat VERSION)
-          export SHA256=$(cat sha256.txt)
+          export SHA256=$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)
           BRANCH_NAME="update-formula-v${VERSION}"
           git fetch origin
           git checkout -b $BRANCH_NAME origin/main
