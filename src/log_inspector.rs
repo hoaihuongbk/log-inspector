@@ -36,8 +36,9 @@ impl LogInspector {
 
     pub async fn summarize(&self, log_content: &str) -> Result<String, Box<dyn StdError>> {
         let prompt = r#"
-            Provide a summary in this exact format:
-            First line: Brief overview of the log situation in one or two sentences.
+            Summarize the log in this format:
+            One or two sentences describing the overall situation.
+
             Then list up to 3 key points with specific metrics where available:
             - For timeouts: include duration (ms/s)
             - For memory issues: include usage values (MB/GB)
@@ -45,6 +46,7 @@ impl LogInspector {
             - For performance issues: include specific thresholds or values
 
             Use "-" (hyphen) for each point. Include only metrics that appear in the logs.
+            Do not include any labels or prefixes in your response.
         "#;
 
         self.client.chat(prompt, log_content).await
