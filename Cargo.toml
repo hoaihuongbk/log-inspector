@@ -1,6 +1,6 @@
 [package]
 name = "log-inspector"
-version = { workspace = true }
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -15,9 +15,3 @@ dotenvy = "0.15"
 
 [dev-dependencies]
 tempfile = "3.8"
-
-[workspace]
-members = ["."]
-
-[workspace.package]
-version = { include = "VERSION" }
