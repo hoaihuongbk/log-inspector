@@ -11,10 +11,6 @@ pub struct LogReader {
 
 impl LogReader {
     pub fn new(file_path: &str) -> io::Result<Self> {
-        // let file = File::open(path)?;
-        // let reader = BufReader::new(file);
-        // Ok(LogReader { reader })
-
         let metadata = std::fs::metadata(file_path)?;
         let file_size = metadata.len() as usize;
         let strategy = ChunkStrategy::new();
@@ -28,10 +24,6 @@ impl LogReader {
     }
 
     pub fn read_chunks(&mut self) -> io::Result<Vec<String>> {
-        // let mut chunks = Vec::new();
-        // let mut current_chunk = Vec::new();
-        // let lines = self.reader.by_ref().lines();
-
         let mut file = File::open(&self.file_path)?;
         let mut content = String::new();
         file.read_to_string(&mut content)?;
