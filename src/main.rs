@@ -9,10 +9,8 @@ use chunk_strategy::ChunkStrategy;
 use dotenv::dotenv;
 use log_inspector::LogInspector;
 use log_reader::LogReader;
-use openai_client::OpenAIClient;
 use std::env;
 use std::io;
-use std::path::PathBuf;
 
 use std::fs::metadata;
 use std::path::Path;

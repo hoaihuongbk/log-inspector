@@ -1,5 +1,4 @@
 use reqwest;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::error::Error as StdError;
 

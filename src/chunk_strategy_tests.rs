@@ -1,3 +1,5 @@
+use crate::chunk_strategy::ChunkStrategy;
+
 #[cfg(test)]
 mod tests {
     use super::*;

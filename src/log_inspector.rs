@@ -1,4 +1,3 @@
-use crate::error_types::ErrorType;
 use crate::openai_client::OpenAIClient;
 use std::error::Error as StdError;
 
