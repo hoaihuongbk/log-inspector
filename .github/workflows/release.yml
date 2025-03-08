@@ -52,7 +52,7 @@ jobs:
           VERSION=$(cat VERSION)
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
-          git add .homebrew/log-inspector.rb
+          git add Formula/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
           git push origin $BRANCH_NAME
       - name: Create Pull Request
