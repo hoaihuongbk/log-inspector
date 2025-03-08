@@ -13,6 +13,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Build
         run: cargo build --release
       - name: Calculate SHA256
@@ -27,17 +29,9 @@ jobs:
           release_name: Release ${{ github.ref }}
           draft: false
           prerelease: false
-      - name: Upload Binary
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./target/release/log-inspector
-          asset_name: log-inspector
-          asset_content_type: application/octet-stream
       - name: Update Formula
         run: |
+          git checkout main
           SHA256=$(cat sha256.txt)
           VERSION=${GITHUB_REF#refs/tags/v}
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" .homebrew/log-inspector.rb
@@ -46,4 +40,4 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add .homebrew/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
-          git push
+          git push origin main
