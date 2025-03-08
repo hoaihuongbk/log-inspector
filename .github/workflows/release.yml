@@ -45,11 +45,11 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Update Formula
         run: |
-          BRANCH_NAME="update-formula-${VERSION}"
+          export VERSION=$(cat VERSION)
+          export SHA256=$(cat sha256.txt)
+          BRANCH_NAME="update-formula-v${VERSION}"
           git fetch origin
-          git checkout -b $BRANCH_NAME
-          SHA256=$(cat sha256.txt)
-          VERSION=$(cat VERSION)
+          git checkout -b $BRANCH_NAME origin/main
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
           git add Formula/log-inspector.rb
