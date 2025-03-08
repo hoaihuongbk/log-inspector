@@ -58,6 +58,12 @@ jobs:
           git fetch origin
           BRANCH_NAME="update-formula-v${VERSION}"
           git checkout -b $BRANCH_NAME origin/main
+          
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          echo "# Updated by GitHub Actions on $TIMESTAMP" > Formula/log-inspector.rb.tmp
+          cat Formula/log-inspector.rb >> Formula/log-inspector.rb.tmp
+          mv Formula/log-inspector.rb.tmp Formula/log-inspector.rb
+          
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
           git add Formula/log-inspector.rb
