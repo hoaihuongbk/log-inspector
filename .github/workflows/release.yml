@@ -19,13 +19,13 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-#      - name: Get Version
-#        id: version
-#        run: echo "::set-output name=version::$(cat VERSION)"
+      - name: Get Version
+        id: version
+        run: echo "::set-output name=version::$(cat VERSION)"
+
       - name: Build
         run: cargo build --release
-#      - name: Calculate SHA256
-#        run: shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1 > sha256.txt
+
 
       - name: Create Release
         id: create_release
@@ -46,14 +46,14 @@ jobs:
           asset_name: log-inspector
           asset_content_type: application/octet-stream
 
-      - name: Log version
-        run: |
-          VERSION=$(cat VERSION)
-          SHA256=$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "SHA256=$SHA256" >> $GITHUB_ENV
+      - name: Calculate Checksum
+        id: checksum
+        run: echo "::set-output name=sha256::$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)"
 
       - name: Update Formula
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA256: ${{ steps.checksum.outputs.sha256 }}
         run: |
           git fetch origin
           BRANCH_NAME="update-formula-v${VERSION}"
@@ -64,20 +64,7 @@ jobs:
           git commit -m "Update formula to version $VERSION"
           git push origin $BRANCH_NAME
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-#      - name: Update Formula
-#        run: |
-#          export VERSION=$(cat VERSION)
-#          export SHA256=$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)
-#          BRANCH_NAME="update-formula-v${VERSION}"
-#          git fetch origin
-#          git checkout -b $BRANCH_NAME origin/main
-#          sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
-#          sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
-#          git add Formula/log-inspector.rb
-#          git commit -m "Update formula to version $VERSION"
-#          git push origin $BRANCH_NAME
-#          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-#          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
   create_pr:
     needs: release
     runs-on: ubuntu-latest
