@@ -13,15 +13,19 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+    outputs:
+      branch_name: ${{ steps.update_formula.outputs.branch_name }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v2
       - name: Get Version
         id: version
-        run: echo "::set-output name=version::$(cat VERSION)"
+        run: |
+          VERSION=$(cat VERSION)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Build
         run: cargo build --release
-
 
       - name: Create Release
         id: create_release
@@ -47,6 +51,7 @@ jobs:
         run: echo "::set-output name=sha256::$(shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1)"
 
       - name: Update Formula
+        id: update_formula
         env:
           VERSION: ${{ steps.version.outputs.version }}
           SHA256: ${{ steps.checksum.outputs.sha256 }}
@@ -65,8 +70,7 @@ jobs:
           git add Formula/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
           git push origin $BRANCH_NAME
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
   create_pr:
     needs: release
@@ -77,9 +81,9 @@ jobs:
         uses: repo-sync/pull-request@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          source_branch: ${{ env.BRANCH_NAME }}
+          source_branch: ${{ needs.release.outputs.branch_name }}
           destination_branch: "main"
-          pr_title: "Update formula to version ${{ env.VERSION }}"
+          pr_title: "Update formula to version ${{ needs.release.outputs.version }}"
           pr_body: "Automated PR to update Homebrew formula"
           pr_label: "automated"
 
