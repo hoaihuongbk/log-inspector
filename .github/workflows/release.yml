@@ -1,28 +1,42 @@
 name: Release
 
 on:
-  release:
-    types: [created]
+  push:
+    paths:
+      - 'VERSION'
+    branches:
+      - main
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
         with:
           token: ${{ secrets.PAT_TOKEN }}
+      - name: Get Version
+        id: version
+        run: echo "::set-output name=version::$(cat VERSION)"
       - name: Build
         run: cargo build --release
       - name: Calculate SHA256
         run: shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1 > sha256.txt
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
       - name: Update Formula
         run: |
           git checkout main
           SHA256=$(cat sha256.txt)
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=$(cat VERSION)
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" .homebrew/log-inspector.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" .homebrew/log-inspector.rb
           git config --global user.email "github-actions@github.com"
