@@ -13,20 +13,6 @@ impl LogInspector {
     }
 
     pub async fn error_classify(&self, log_content: &str) -> Result<String, Box<dyn StdError>> {
-        // let prompt = r#"
-        //     Classify the errors in these logs into the following categories only:
-        //     - USER_CODE_ERROR: User code related issues
-        //     - SCALING_ERROR: Resource scaling issues
-        //     - SPARK_ERROR: General Spark runtime errors
-        //     - SPARK_OOM_ERROR: Spark out of memory errors
-        //     - NETWORK_ERROR: Network connectivity issues
-        //     - PERMISSION_ERROR: Access and permission issues
-        //     - UNKNOWN_ERROR: Errors that don't fit other categories
-        //
-        //     List the error codes from highest to lowest probability (left to right).
-        //     Return only the comma-separated list, maximum 3 codes, no other text.
-        // "#;
-
         let prompt = r#"
             Analyze the logs and return codes from these categories:
             - SUCCESS: Successful execution without errors
