@@ -1,11 +1,9 @@
 use crate::chunk_strategy::ChunkStrategy;
 use std::fs::File;
 use std::io::Read;
-use std::io::{self, BufRead};
+use std::io::{self};
 
 pub struct LogReader {
-    // reader: BufReader<File>,
-
     file_path: String,
     strategy: ChunkStrategy,
     optimal_chunk_size: usize,
@@ -61,7 +59,7 @@ impl LogReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::File;
+    
     use std::io::Write;
     use tempfile::NamedTempFile;
 
