@@ -19,8 +19,6 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v2
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
       - name: Get Version
         id: version
         run: echo "::set-output name=version::$(cat VERSION)"
@@ -47,12 +45,10 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Update Formula
         run: |
-          git fetch origin
-          git checkout -b main origin/main
           SHA256=$(cat sha256.txt)
           VERSION=$(cat VERSION)
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" .homebrew/log-inspector.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" .homebrew/log-inspector.rb
           git add .homebrew/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
-          git push origin main
+          git push
