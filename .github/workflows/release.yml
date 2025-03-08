@@ -45,6 +45,8 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Update Formula
         run: |
+          git fetch origin
+          git checkout -b main origin/main
           SHA256=$(cat sha256.txt)
           VERSION=$(cat VERSION)
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" .homebrew/log-inspector.rb
