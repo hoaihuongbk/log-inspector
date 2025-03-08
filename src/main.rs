@@ -1,15 +1,13 @@
 mod chunk_strategy;
+mod config;
 mod error_types;
 mod log_inspector;
 mod log_reader;
 mod openai_client;
-mod config;
 
-use chunk_strategy::ChunkStrategy;
-use dotenv::dotenv;
+use config::Config;
 use log_inspector::LogInspector;
 use log_reader::LogReader;
-use config::Config;
 use std::env;
 use std::io;
 
@@ -31,19 +29,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Starting log inspection for: {}", log_path);
 
-    let file_size = get_file_size(log_path)?;
-    println!("Log file size: {} bytes", file_size);
-
-    // Initialize the log reader and chunk strategy
-    let strategy = ChunkStrategy::new();
-    let chunk_size = strategy.calculate_optimal_chunk_size(file_size as usize);
+    // Initialize reader and inspector
     let mut reader = LogReader::new(log_path)?;
-    let chunks = reader.read_chunks(chunk_size)?;
-
     // Initialize the OpenAI client and log inspector
     let inspector = LogInspector::new(config.openai_api_key, config.openai_host);
 
     // Process each chunk
+    let chunks = reader.read_chunks()?;
     for (i, chunk) in chunks.iter().enumerate() {
         println!("\n=== Processing chunk {} ===", i + 1);
 

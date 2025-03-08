@@ -1,36 +1,57 @@
+use crate::chunk_strategy::ChunkStrategy;
 use std::fs::File;
 use std::io::Read;
-use std::io::{self, BufRead, BufReader};
-use std::path::Path; // Add this trait
+use std::io::{self, BufRead};
 
 pub struct LogReader {
-    reader: BufReader<File>,
+    // reader: BufReader<File>,
+
+    file_path: String,
+    strategy: ChunkStrategy,
+    optimal_chunk_size: usize,
 }
 
 impl LogReader {
-    pub fn new<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let file = File::open(path)?;
-        let reader = BufReader::new(file);
-        Ok(LogReader { reader })
+    pub fn new(file_path: &str) -> io::Result<Self> {
+        // let file = File::open(path)?;
+        // let reader = BufReader::new(file);
+        // Ok(LogReader { reader })
+
+        let metadata = std::fs::metadata(file_path)?;
+        let file_size = metadata.len() as usize;
+        let strategy = ChunkStrategy::new();
+        let optimal_chunk_size = strategy.calculate_optimal_chunk_size(file_size);
+
+        Ok(LogReader {
+            file_path: file_path.to_string(),
+            strategy,
+            optimal_chunk_size,
+        })
     }
 
-    pub fn read_chunks(&mut self, chunk_size: usize) -> io::Result<Vec<String>> {
+    pub fn read_chunks(&mut self) -> io::Result<Vec<String>> {
+        // let mut chunks = Vec::new();
+        // let mut current_chunk = Vec::new();
+        // let lines = self.reader.by_ref().lines();
+
+        let mut file = File::open(&self.file_path)?;
+        let mut content = String::new();
+        file.read_to_string(&mut content)?;
+
         let mut chunks = Vec::new();
-        let mut current_chunk = Vec::new();
-        let lines = self.reader.by_ref().lines();
+        let mut start = 0;
 
-        for line_result in lines {
-            let line = line_result?;
-            current_chunk.push(line);
-
-            if current_chunk.len() >= chunk_size {
-                chunks.push(current_chunk.join("\n"));
-                current_chunk.clear();
+        while start < content.len() {
+            let remaining = content.len() - start;
+            if remaining <= self.optimal_chunk_size {
+                chunks.push(content[start..].to_string());
+                break;
             }
-        }
 
-        if !current_chunk.is_empty() {
-            chunks.push(current_chunk.join("\n"));
+            let boundary = self.strategy.find_chunk_boundary(&content[start..]);
+            let chunk = content[start..start + boundary].to_string();
+            chunks.push(chunk);
+            start += boundary;
         }
 
         Ok(chunks)
@@ -40,56 +61,32 @@ impl LogReader {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::write;
+    use std::fs::File;
+    use std::io::Write;
     use tempfile::NamedTempFile;
 
-    #[test]
-    fn test_read_chunks_empty_file() -> io::Result<()> {
-        let temp_file = NamedTempFile::new()?;
-        let mut reader = LogReader::new(temp_file.path())?;
-        let chunks = reader.read_chunks(2)?;
-        assert!(chunks.is_empty());
-        Ok(())
+    fn create_test_log(content: &str) -> NamedTempFile {
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(content.as_bytes()).unwrap();
+        file
     }
 
     #[test]
-    fn test_read_chunks_single_line() -> io::Result<()> {
-        let temp_file = NamedTempFile::new()?;
-        write(temp_file.path(), "line1")?;
+    fn test_large_file_multiple_chunks() {
+        // Create a larger log file content (>10KB to trigger chunking)
+        let mut content = String::new();
+        for i in 0..200 {
+            content.push_str(&format!("2024-01-10 10:15:{:02} INFO: Log entry {}\n\
+                                     2024-01-10 10:15:{:02} ERROR: Error message {}\n\
+                                     2024-01-10 10:15:{:02} WARNING: Warning message {}\n",
+                                      i, i, i, i, i, i));
+        }
 
-        let mut reader = LogReader::new(temp_file.path())?;
-        let chunks = reader.read_chunks(2)?;
+        let file = create_test_log(&content);
+        let mut reader = LogReader::new(file.path().to_str().unwrap()).unwrap();
+        let chunks = reader.read_chunks().unwrap();
 
-        assert_eq!(chunks.len(), 1);
-        assert_eq!(chunks[0], "line1");
-        Ok(())
-    }
-
-    #[test]
-    fn test_read_chunks_multiple_lines() -> io::Result<()> {
-        let temp_file = NamedTempFile::new()?;
-        write(temp_file.path(), "line1\nline2\nline3\nline4")?;
-
-        let mut reader = LogReader::new(temp_file.path())?;
-        let chunks = reader.read_chunks(2)?;
-
-        assert_eq!(chunks.len(), 2);
-        assert_eq!(chunks[0], "line1\nline2");
-        assert_eq!(chunks[1], "line3\nline4");
-        Ok(())
-    }
-
-    #[test]
-    fn test_read_chunks_partial_chunk() -> io::Result<()> {
-        let temp_file = NamedTempFile::new()?;
-        write(temp_file.path(), "line1\nline2\nline3")?;
-
-        let mut reader = LogReader::new(temp_file.path())?;
-        let chunks = reader.read_chunks(2)?;
-
-        assert_eq!(chunks.len(), 2);
-        assert_eq!(chunks[0], "line1\nline2");
-        assert_eq!(chunks[1], "line3");
-        Ok(())
+        assert!(chunks.len() > 1);
+        assert!(chunks.iter().all(|chunk| !chunk.is_empty()));
     }
 }

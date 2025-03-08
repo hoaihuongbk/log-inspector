@@ -1,10 +1,7 @@
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::PathBuf;
-use std::env;
 use dotenvy::{dotenv, from_path};
-
-
+use serde::{Deserialize, Serialize};
+use std::env;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -40,7 +37,8 @@ impl Config {
         // Priority 3: Local .env file
         dotenv().ok();
         let dotenv_api_key = env::var("OPENAI_API_KEY");
-        let dotenv_host = env::var("OPENAI_HOST").unwrap_or_else(|_| "https://api.openai.com".to_string());
+        let dotenv_host =
+            env::var("OPENAI_HOST").unwrap_or_else(|_| "https://api.openai.com".to_string());
 
         if let Ok(api_key) = dotenv_api_key {
             return Ok(Config {
