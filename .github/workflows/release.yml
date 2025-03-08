@@ -1,11 +1,15 @@
 name: Release
 
 on:
-  push:
-    paths:
-      - 'VERSION'
-    branches:
-      - main
+#  push:
+#    paths:
+#      - 'VERSION'
+#    branches:
+#      - main
+  pull_request:
+    branches: [ "main" ]
+#    paths:
+#      - 'VERSION'
 
 permissions:
   contents: write
@@ -32,6 +36,15 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           release_name: Release v${{ steps.version.outputs.version }}
+      - name: Upload Binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./target/release/log-inspector
+          asset_name: log-inspector
+          asset_content_type: application/octet-stream
       - name: Update Formula
         run: |
           git checkout main
