@@ -1,0 +1,4 @@
+2024-01-10 10:15:30 INFO: Application started
+2024-01-10 10:15:31 ERROR: Failed to connect to database
+2024-01-10 10:15:32 WARNING: High memory usage detected
+2024-01-10 10:15:33 ERROR: Connection timeout
