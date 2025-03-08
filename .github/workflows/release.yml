@@ -24,8 +24,8 @@ jobs:
         run: echo "::set-output name=version::$(cat VERSION)"
       - name: Build
         run: cargo build --release
-      - name: Calculate SHA256
-        run: shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1 > sha256.txt
+#      - name: Calculate SHA256
+#        run: shasum -a 256 target/release/log-inspector | cut -d ' ' -f 1 > sha256.txt
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
