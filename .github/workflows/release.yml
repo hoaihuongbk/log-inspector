@@ -72,12 +72,13 @@ jobs:
           git fetch origin
           BRANCH_NAME="update-formula-v${VERSION}"
           git checkout -b $BRANCH_NAME origin/main
-          sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
-          sed -i '' "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
+          sed -i "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
+          sed -i "s/sha256 \".*\"/sha256 \"$SHA256\"/" Formula/log-inspector.rb
           git add Formula/log-inspector.rb
           git commit -m "Update formula to version $VERSION"
           git push origin $BRANCH_NAME
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
       - name: Create Pull Request
         uses: repo-sync/pull-request@v2
         with:
