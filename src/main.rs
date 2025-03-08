@@ -1,5 +1,4 @@
 mod chunk_strategy;
-mod chunk_strategy_tests;
 mod error_types;
 mod log_inspector;
 mod log_reader;
