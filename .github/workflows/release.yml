@@ -47,7 +47,7 @@ jobs:
         run: |
           BRANCH_NAME="update-formula-${VERSION}"
           git fetch origin
-          git checkout -b $BRANCH_NAME
+          git checkout -b $BRANCH_NAME origin/main
           SHA256=$(cat sha256.txt)
           VERSION=$(cat VERSION)
           sed -i '' "s/version \".*\"/version \"$VERSION\"/" Formula/log-inspector.rb
