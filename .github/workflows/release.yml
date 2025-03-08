@@ -81,19 +81,17 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v2
-      - name: Create Pull Request
-        uses: repo-sync/pull-request@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          source_branch: ${{ needs.release.outputs.branch_name }}
-          destination_branch: "main"
-          pr_title: "Update formula to version ${{ needs.release.outputs.version }}"
-          pr_body: "Automated PR to update Homebrew formula"
-          pr_label: "automated"
+          fetch-depth: 0
 
-      - name: Enable Auto-merge
-        uses: peter-evans/enable-pull-request-automerge@v2
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          pull-request-number: ${{ steps.create-pr.outputs.pr_number }}
-          merge-method: squash
+      - name: Create Pull Request and Enable Auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --base main \
+            --head ${{ needs.release.outputs.branch_name }} \
+            --title "Update formula to version ${{ needs.release.outputs.version }}" \
+            --body "Automated PR to update Homebrew formula" \
+            --label "automated")
+          gh pr merge --auto --merge "$PR_URL"
