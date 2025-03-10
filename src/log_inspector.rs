@@ -2,7 +2,9 @@ use std::error::{Error as StdError, Error};
 use std::time::Instant;
 
 use async_trait::async_trait;
+use colored::*;
 use futures::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
 use langchain_rust::{
     chain::{Chain, ConversationalRetrieverChainBuilder},
     document_loaders::{Loader, TextLoader},
@@ -16,8 +18,6 @@ use langchain_rust::{
     template_jinja2,
     text_splitter::TokenSplitter,
 };
-use colored::*;
-use indicatif::{ProgressBar, ProgressStyle};
 
 pub struct MemoryRetriever {
     docs: Vec<Document>,
@@ -57,7 +57,6 @@ impl LogInspector {
         log_path: &str,
         question: &str,
     ) -> Result<String, Box<dyn StdError>> {
-
         // Set start time
         let start = Instant::now();
 
@@ -67,9 +66,8 @@ impl LogInspector {
             ProgressStyle::default_spinner()
                 .tick_chars("⣾⣽⣻⢿⡿⣟⣯⣷")
                 .template("{spinner:.cyan} {msg} ({percent}%)")
-                .unwrap()
+                .unwrap(),
         );
-
 
         spinner.set_message("Loading log file...");
         let splitter = TokenSplitter::default();
@@ -133,9 +131,6 @@ impl LogInspector {
         spinner.set_message("Analyzing logs...");
         let result = chain.invoke(input_variables).await?;
 
-        // Split the result into error code and points
-        let lines: Vec<&str> = result.lines().collect();
-
         // Clear the spinner
         spinner.finish_and_clear();
 
@@ -145,38 +140,44 @@ impl LogInspector {
         let mut formatted = String::new();
 
         // Vibrant header colors
-        formatted.push_str(&format!("🔍 {}\n", "Log Analysis Report".bright_magenta().bold())); // Bright pink
+        formatted.push_str(&format!(
+            "🔍 {}\n",
+            "Log Analysis Report".bright_magenta().bold()
+        )); // Bright pink
         formatted.push_str(&format!("📄 File: {}\n", log_path.bright_blue())); // Bright blue
-        formatted.push_str(&format!("⏱️ Completed in {:.2}s\n\n", duration.as_secs_f64()));
+        formatted.push_str(&format!(
+            "⏱️ Completed in {:.2}s\n\n",
+            duration.as_secs_f64()
+        ));
 
         // Color labels with vibrant colors
         for line in result.lines() {
             if line.starts_with("ERROR_CODES:") {
                 let (label, content) = line.split_once(':').unwrap_or((line, ""));
-                formatted.push_str(&format!("{}:{}\n",
-                                            label.magenta().bold(), // Pink
-                                            content
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.magenta().bold(), // Pink
+                    content
                 ));
             } else if line.starts_with("SUMMARY:") {
                 let (label, content) = line.split_once(':').unwrap_or((line, ""));
-                formatted.push_str(&format!("{}:{}\n",
-                                            label.bright_blue().bold(), // Bright blue
-                                            content
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.bright_blue().bold(), // Bright blue
+                    content
                 ));
             } else if line.starts_with("METRICS:") {
                 let (label, content) = line.split_once(':').unwrap_or((line, ""));
-                formatted.push_str(&format!("{}:{}\n",
-                                            label.cyan().bold(), // Cyan
-                                            content
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.cyan().bold(), // Cyan
+                    content
                 ));
             } else {
                 formatted.push_str(&format!("{}\n", line));
             }
         }
 
-
-
         Ok(formatted)
     }
-
 }

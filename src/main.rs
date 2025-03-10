@@ -4,15 +4,6 @@ mod log_inspector;
 use config::Config;
 use log_inspector::LogInspector;
 use std::env;
-use std::io;
-
-use std::fs::metadata;
-use std::path::Path;
-
-fn get_file_size<P: AsRef<Path>>(path: P) -> io::Result<u64> {
-    let metadata = metadata(path)?;
-    Ok(metadata.len())
-}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
