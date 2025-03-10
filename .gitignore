@@ -7,3 +7,5 @@
 /Cargo.lock
 /.env
 sha256.txt
+/stderr_example.txt
+/stdout_example.txt
