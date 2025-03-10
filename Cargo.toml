@@ -12,6 +12,12 @@ dotenv = "0.15"
 dirs = "5.0"
 toml = "0.8.20"
 dotenvy = "0.15"
+#langchain-rust = { version = "4.6.0", features = ["postgres", "sqlite"] }
+langchain-rust = { git = "https://github.com/Abraxas-365/langchain-rust.git", features = ["sqlite-vec"] }
+sqlite-vec = "0.1.6"
+async-openai = "0.28.0"
+async-trait = "0.1.87"
+futures = "0.3.31"
 
 [dev-dependencies]
 tempfile = "3.8"

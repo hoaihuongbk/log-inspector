@@ -30,21 +30,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Starting log inspection for: {}", log_path);
 
     // Initialize reader and inspector
-    let mut reader = LogReader::new(log_path)?;
+    // let mut reader = LogReader::new(log_path)?;
     // Initialize the OpenAI client and log inspector
     let inspector = LogInspector::new(config.openai_api_key, config.openai_host);
 
+    let question = "What is the summary of this log?";
+    println!("Question: {}", question);
+    let summary = inspector.analyze(log_path, question).await?;
+    println!("{}", summary);
+
     // Process each chunk
-    let chunks = reader.read_chunks()?;
-    for (i, chunk) in chunks.iter().enumerate() {
-        println!("\n=== Processing chunk {} ===", i + 1);
-
-        let error_codes = inspector.error_classify(chunk).await?;
-        println!("Error Codes: {}", error_codes);
-
-        let summary = inspector.summarize(chunk).await?;
-        println!("Summary: {}", summary);
-    }
+    // let chunks = reader.read_chunks()?;
+    // for (i, chunk) in chunks.iter().enumerate() {
+    //     println!("\n=== Processing chunk {} ===", i + 1);
+    //
+    //     let error_codes = inspector.error_classify(chunk).await?;
+    //     println!("Error Codes: {}", error_codes);
+    //
+    //     let summary = inspector.summarize(chunk).await?;
+    //     println!("Summary: {}", summary);
+    // }
 
     Ok(())
 }
