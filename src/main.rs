@@ -7,7 +7,6 @@ mod openai_client;
 
 use config::Config;
 use log_inspector::LogInspector;
-use log_reader::LogReader;
 use std::env;
 use std::io;
 
@@ -35,21 +34,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let inspector = LogInspector::new(config.openai_api_key, config.openai_host);
 
     let question = "What is the summary of this log?";
-    println!("Question: {}", question);
     let summary = inspector.analyze(log_path, question).await?;
     println!("{}", summary);
-
-    // Process each chunk
-    // let chunks = reader.read_chunks()?;
-    // for (i, chunk) in chunks.iter().enumerate() {
-    //     println!("\n=== Processing chunk {} ===", i + 1);
-    //
-    //     let error_codes = inspector.error_classify(chunk).await?;
-    //     println!("Error Codes: {}", error_codes);
-    //
-    //     let summary = inspector.summarize(chunk).await?;
-    //     println!("Summary: {}", summary);
-    // }
 
     Ok(())
 }
