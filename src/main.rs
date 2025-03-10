@@ -22,8 +22,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load configuration from all possible sources
     let config = Config::load()?;
 
-    println!("Starting log inspection for: {}", log_path);
-
     // Initialize log inspector
     let inspector = LogInspector::new(config.openai_api_key, config.openai_host);
 
