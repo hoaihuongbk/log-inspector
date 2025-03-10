@@ -5,15 +5,15 @@ use futures::StreamExt;
 use langchain_rust::{
     chain::{Chain, ConversationalRetrieverChainBuilder},
     document_loaders::{Loader, TextLoader},
-    llm::{OpenAI,OpenAIConfig, OpenAIModel},
+    fmt_message, fmt_template,
+    llm::{OpenAI, OpenAIConfig, OpenAIModel},
     memory::SimpleMemory,
-    prompt::HumanMessagePromptTemplate,
-    schemas::{Document, Message, Retriever},
     message_formatter,
+    prompt::HumanMessagePromptTemplate,
     prompt_args,
-    fmt_message,
-    fmt_template,
+    schemas::{Document, Message, Retriever},
     template_jinja2,
+    text_splitter::TokenSplitter,
 };
 
 pub struct MemoryRetriever {
@@ -45,9 +45,7 @@ impl LogInspector {
 
         let client = OpenAI::new(config).with_model(OpenAIModel::Gpt35.to_string());
 
-        LogInspector {
-            client
-        }
+        LogInspector { client }
     }
 
     // Inside analyze function, add these debug points:
@@ -57,8 +55,9 @@ impl LogInspector {
         question: &str,
     ) -> Result<String, Box<dyn StdError>> {
         // After loading documents
+        let splitter = TokenSplitter::default();
         let loader = TextLoader::new(log_path);
-        let mut docs_stream = loader.load().await?;
+        let mut docs_stream = loader.load_and_split(splitter).await?;
 
         let mut docs = Vec::new();
         while let Some(doc) = docs_stream.next().await {
@@ -67,7 +66,6 @@ impl LogInspector {
 
         let retriever = MemoryRetriever::new(docs);
 
-
         let prompt = message_formatter![
     fmt_message!(Message::new_system_message(
         "You are a log analysis expert. Return structured insights in the exact format specified."
@@ -75,7 +73,7 @@ impl LogInspector {
     fmt_template!(HumanMessagePromptTemplate::new(
         template_jinja2!("
             Analyze these logs and return in this exact format:
-            Status: Return one of these error codes (comma-separated if multiple, max 3): SUCCESS, USER_CODE_ERROR, SCALING_ERROR, SPARK_ERROR, SPARK_OOM_ERROR, NETWORK_ERROR, PERMISSION_ERROR, UNKNOWN_ERROR
+            Status: return the error codes (comma-separated if multiple, max 3): SUCCESS, USER_CODE_ERROR, SCALING_ERROR, SPARK_ERROR, SPARK_OOM_ERROR, NETWORK_ERROR, PERMISSION_ERROR, UNKNOWN_ERROR
 
             Then list exactly 3 key points with specific metrics where available:
             - For timeouts: include duration (ms/s)
