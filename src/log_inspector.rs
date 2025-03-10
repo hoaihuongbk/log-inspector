@@ -1,54 +1,183 @@
-use crate::openai_client::OpenAIClient;
-use std::error::Error as StdError;
+use std::error::{Error as StdError, Error};
+use std::time::Instant;
+
+use async_trait::async_trait;
+use colored::*;
+use futures::StreamExt;
+use indicatif::{ProgressBar, ProgressStyle};
+use langchain_rust::{
+    chain::{Chain, ConversationalRetrieverChainBuilder},
+    document_loaders::{Loader, TextLoader},
+    fmt_message, fmt_template,
+    llm::{OpenAI, OpenAIConfig, OpenAIModel},
+    memory::SimpleMemory,
+    message_formatter,
+    prompt::HumanMessagePromptTemplate,
+    prompt_args,
+    schemas::{Document, Message, Retriever},
+    template_jinja2,
+    text_splitter::TokenSplitter,
+};
+
+pub struct MemoryRetriever {
+    docs: Vec<Document>,
+}
+
+impl MemoryRetriever {
+    pub fn new(docs: Vec<Document>) -> Self {
+        Self { docs }
+    }
+}
+
+#[async_trait]
+impl Retriever for MemoryRetriever {
+    async fn get_relevant_documents(&self, _query: &str) -> Result<Vec<Document>, Box<dyn Error>> {
+        Ok(self.docs.clone())
+    }
+}
 
 pub struct LogInspector {
-    client: OpenAIClient,
+    client: OpenAI<OpenAIConfig>,
 }
 
 impl LogInspector {
     pub fn new(api_key: String, host: String) -> Self {
-        LogInspector {
-            client: OpenAIClient::new(api_key, host),
+        let config = OpenAIConfig::new()
+            .with_api_key(api_key)
+            .with_api_base(host);
+
+        let client = OpenAI::new(config).with_model(OpenAIModel::Gpt35.to_string());
+
+        LogInspector { client }
+    }
+
+    // Inside analyze function, add these debug points:
+    pub async fn analyze(
+        &self,
+        log_path: &str,
+        question: &str,
+    ) -> Result<String, Box<dyn StdError>> {
+        // Set start time
+        let start = Instant::now();
+
+        // Create spinner
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_style(
+            ProgressStyle::default_spinner()
+                .tick_chars("⣾⣽⣻⢿⡿⣟⣯⣷")
+                .template("{spinner:.cyan} {msg} ({percent}%)")
+                .unwrap(),
+        );
+
+        spinner.set_message("Loading log file...");
+        let splitter = TokenSplitter::default();
+        let loader = TextLoader::new(log_path);
+        let mut docs_stream = loader.load_and_split(splitter).await?;
+
+        spinner.set_message("Processing documents...");
+        let mut docs = Vec::new();
+        while let Some(doc) = docs_stream.next().await {
+            docs.push(doc?);
         }
-    }
 
-    pub async fn error_classify(&self, log_content: &str) -> Result<String, Box<dyn StdError>> {
-        let prompt = r#"
-            Analyze the logs and return codes from these categories:
-            - SUCCESS: Successful execution without errors
-            - USER_CODE_ERROR
-            - SCALING_ERROR
-            - SPARK_ERROR
-            - SPARK_OOM_ERROR
-            - NETWORK_ERROR
-            - PERMISSION_ERROR
-            - UNKNOWN_ERROR
+        let retriever = MemoryRetriever::new(docs);
 
-            Rules:
-            1. If execution was successful, return only "SUCCESS"
-            2. Otherwise, return up to 3 error codes from highest to lowest probability (left to right)
+        let prompt = message_formatter![
+    fmt_message!(Message::new_system_message(
+        "You are a log analysis expert. Return response in this exact format with no deviations."
+    )),
+    fmt_template!(HumanMessagePromptTemplate::new(
+        template_jinja2!("
+            Analyze these logs and return in this exact format:
 
-            Return only the comma-separated list, no other text.
-        "#;
+            ERROR_CODES: [list up to 3 codes separated by comma]
+            SUMMARY: [one sentence overview]
+            METRICS:
+            - [first metric with specific values]
+            - [second metric with specific values]
+            - [third metric with specific values]
 
-        self.client.chat(prompt, log_content).await
-    }
+            Use these error codes only:
+            SUCCESS, USER_CODE_ERROR, SCALING_ERROR, SPARK_ERROR, SPARK_OOM_ERROR, NETWORK_ERROR, PERMISSION_ERROR, UNKNOWN_ERROR
 
-    pub async fn summarize(&self, log_content: &str) -> Result<String, Box<dyn StdError>> {
-        let prompt = r#"
-            Summarize the log in this format:
-            One or two sentences describing the overall situation.
+            Each metric must include specific values:
+            - For timeouts: duration (ms/s)
+            - For memory: usage (MB/GB)
+            - For connections: retry counts
+            - For performance: thresholds/values
 
-            Then list up to 3 key points with specific metrics where available:
-            - For timeouts: include duration (ms/s)
-            - For memory issues: include usage values (MB/GB)
-            - For connection errors: include retry counts or failure duration
-            - For performance issues: include specific thresholds or values
+            Context:
+            {{context}}
 
-            Use "-" (hyphen) for each point. Include only metrics that appear in the logs.
-            Do not include any labels or prefixes in your response.
-        "#;
+            Question: {{question}}
+        ", "context", "question"
+    )))
+];
 
-        self.client.chat(prompt, log_content).await
+        let chain = ConversationalRetrieverChainBuilder::new()
+            .llm(self.client.clone())
+            .rephrase_question(true)
+            .retriever(retriever)
+            .memory(SimpleMemory::new().into())
+            .prompt(prompt)
+            .build()
+            .expect("Error building ConversationalChain");
+
+        let input_variables = prompt_args! {
+            "question" => question,
+        };
+
+        // Before chain invocation
+        spinner.set_message("Analyzing logs...");
+        let result = chain.invoke(input_variables).await?;
+
+        // Clear the spinner
+        spinner.finish_and_clear();
+
+        // Set end time
+        let duration = start.elapsed();
+
+        let mut formatted = String::new();
+
+        // Vibrant header colors
+        formatted.push_str(&format!(
+            "🔍 {}\n",
+            "Log Analysis Report".bright_magenta().bold()
+        )); // Bright pink
+        formatted.push_str(&format!("📄 File: {}\n", log_path.bright_blue())); // Bright blue
+        formatted.push_str(&format!(
+            "⏱️ Completed in {:.2}s\n\n",
+            duration.as_secs_f64()
+        ));
+
+        // Color labels with vibrant colors
+        for line in result.lines() {
+            if line.starts_with("ERROR_CODES:") {
+                let (label, content) = line.split_once(':').unwrap_or((line, ""));
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.magenta().bold(), // Pink
+                    content
+                ));
+            } else if line.starts_with("SUMMARY:") {
+                let (label, content) = line.split_once(':').unwrap_or((line, ""));
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.bright_blue().bold(), // Bright blue
+                    content
+                ));
+            } else if line.starts_with("METRICS:") {
+                let (label, content) = line.split_once(':').unwrap_or((line, ""));
+                formatted.push_str(&format!(
+                    "{}:{}\n",
+                    label.cyan().bold(), // Cyan
+                    content
+                ));
+            } else {
+                formatted.push_str(&format!("{}\n", line));
+            }
+        }
+
+        Ok(formatted)
     }
 }
