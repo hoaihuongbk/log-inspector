@@ -1,9 +1,5 @@
-mod chunk_strategy;
 mod config;
-mod error_types;
 mod log_inspector;
-mod log_reader;
-mod openai_client;
 
 use config::Config;
 use log_inspector::LogInspector;
@@ -28,9 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Starting log inspection for: {}", log_path);
 
-    // Initialize reader and inspector
-    // let mut reader = LogReader::new(log_path)?;
-    // Initialize the OpenAI client and log inspector
+    // Initialize log inspector
     let inspector = LogInspector::new(config.openai_api_key, config.openai_host);
 
     let question = "What is the summary of this log?";
